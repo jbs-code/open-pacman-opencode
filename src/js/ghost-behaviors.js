@@ -8,12 +8,38 @@ const DEBUG_GHOSTS = false;
 // Interior de la pen (cols 11-16, filas 13-15) y celda de salida.
 const PEN_BOX = { x1: 11, y1: 13, x2: 16, y2: 15 };
 const PEN_EXIT = { x: 13, y: 11 };
+const CLYDE_CORNER = { x: 0, y: 0 };
+const CLYDE_SHY_RANGE = 8;
+
+function pacmanCell( game ) {
+  const p = game.pacman;
+  return { x: Math.round( p.x ), y: Math.round( p.y ) };
+}
+
+// Celda a n pasos por delante de Pac-Man en su dirección actual.
+function cellsAheadOfPacman( game, n ) {
+  const cell = pacmanCell( game );
+  const d = DIRS[ game.pacman.dir ];
+  return { x: cell.x + d.x * n, y: cell.y + d.y * n };
+}
 
 // Cada estrategia devuelve la celda objetivo { x, y }.
 const GHOST_BEHAVIORS = {
   blinky( game ) {
-    const p = game.pacman;
-    return { x: Math.round( p.x ), y: Math.round( p.y ) };
+    return pacmanCell( game );
+  },
+  pinky( game ) {
+    return cellsAheadOfPacman( game, 4 );
+  },
+  inky( game ) {
+    const ahead = cellsAheadOfPacman( game, 2 );
+    const blinky = game.ghosts.find( ( g ) => g.kind === 'blinky' );
+    return { x: 2 * ( ahead.x - blinky.x ), y: 2 * ( ahead.y - blinky.y ) };
+  },
+  clyde( game, ghost ) {
+    const p = pacmanCell( game );
+    const dist = Math.abs( ghost.x - p.x ) + Math.abs( ghost.y - p.y );
+    return dist > CLYDE_SHY_RANGE ? p : CLYDE_CORNER;
   },
 };
 
