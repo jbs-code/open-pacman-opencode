@@ -78,5 +78,14 @@ function decideGhostBehavior( game, ghost ) {
     }
   }
 
+  if ( DEBUG_GHOSTS ) {
+    console.debug(
+      '[ghost]', ghost.kind,
+      '| celda', { x: ghost.x, y: ghost.y },
+      '| target', { x: target.x, y: target.y },
+      '| dir', best
+    );
+  }
+
   return best;
 }
