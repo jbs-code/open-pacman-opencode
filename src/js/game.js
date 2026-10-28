@@ -142,16 +142,20 @@ function moveGhost( game, g ) {
   wrapTunnel( g, width );
 }
 
+// Tras morir se reinicia la cola: la ronda vuelve a empezar con blinky fuera
+// y los demás esperando su turno.
 function resetPositions( game ) {
   const p = game.pacman;
   p.x = PACMAN_START.x;
   p.y = PACMAN_START.y;
   p.dir = 'left';
   p.nextDir = null;
+  game.penTimer = 0;
   game.ghosts.forEach( ( g, i ) => {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    g.released = i === 0;
   } );
 }
 
