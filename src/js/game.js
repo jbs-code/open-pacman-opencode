@@ -116,17 +116,23 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
-function moveGhost( game, g ) {
-  // Aún no le toca salir: no navega ni se mueve.
-  if ( !g.released ) return;
+// Dirección de un fantasma en espera: oscila en horizontal dentro de la pen,
+// invierte al chocar con un muro. La pen solo se sale arriba, así que nunca
+// cruzará la puerta mientras espere.
+function waitDir( grid, ghost ) {
+  if ( ghost.dir !== 'left' && ghost.dir !== 'right' ) return 'left';
+  if ( canMove( grid, ghost.x, ghost.y, ghost.dir, 'ghost' ) ) return ghost.dir;
+  return OPPOSITE[ ghost.dir ];
+}
 
+function moveGhost( game, g ) {
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
   if ( aligned( g.x ) && aligned( g.y ) ) {
     g.x = Math.round( g.x );
     g.y = Math.round( g.y );
-    g.dir = decideGhostBehavior( game, g );
+    g.dir = g.released ? decideGhostBehavior( game, g ) : waitDir( grid, g );
     if ( !canMove( grid, g.x, g.y, g.dir, 'ghost' ) ) return;
   }
 
