@@ -13,6 +13,9 @@ const OPPOSITE = { left: 'right', right: 'left', up: 'down', down: 'up' };
 const PACMAN_SPEED = 0.125; // 1/8 celda/frame -> alinea cada 8 frames
 const GHOST_SPEED = 0.1;    // 1/10 celda/frame
 
+// Cadencia de liberación de la pen: un fantasma cada 90 frames (~1.5s a 60fps).
+const RELEASE_EVERY = 90;
+
 // Crea una partida nueva. Copia MAZE (pristino) a game.grid para poder comer
 // dots sin destruir el original, y reiniciar.
 function createGame() {
@@ -28,6 +31,7 @@ function createGame() {
     score: 0,
     lives: 3,
     dotsRemaining: dots,
+    penTimer: 0, // frames transcurridos desde el inicio de la ronda
     grid,
     pacman: {
       x: PACMAN_START.x,
@@ -36,12 +40,14 @@ function createGame() {
       nextDir: null,
       speed: PACMAN_SPEED,
     },
-    ghosts: GHOST_STARTS.map( ( g ) => ( {
+    ghosts: GHOST_STARTS.map( ( g, i ) => ( {
       x: g.x,
       y: g.y,
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      releaseAt: i * RELEASE_EVERY, // blinky 0, pinky 90, inky 180, clyde 270
+      released: i === 0,            // solo blinky sale al instante
     } ) ),
   };
 }
@@ -110,6 +116,15 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
+// Dirección de un fantasma en espera: oscila en horizontal dentro de la pen,
+// invierte al chocar con un muro. La pen solo se sale arriba, así que nunca
+// cruzará la puerta mientras espere.
+function waitDir( grid, ghost ) {
+  if ( ghost.dir !== 'left' && ghost.dir !== 'right' ) return 'left';
+  if ( canMove( grid, ghost.x, ghost.y, ghost.dir, 'ghost' ) ) return ghost.dir;
+  return OPPOSITE[ ghost.dir ];
+}
+
 function moveGhost( game, g ) {
   const grid = game.grid;
   const width = grid[ 0 ].length;
@@ -117,7 +132,7 @@ function moveGhost( game, g ) {
   if ( aligned( g.x ) && aligned( g.y ) ) {
     g.x = Math.round( g.x );
     g.y = Math.round( g.y );
-    g.dir = decideGhostBehavior( game, g );
+    g.dir = g.released ? decideGhostBehavior( game, g ) : waitDir( grid, g );
     if ( !canMove( grid, g.x, g.y, g.dir, 'ghost' ) ) return;
   }
 
@@ -127,16 +142,20 @@ function moveGhost( game, g ) {
   wrapTunnel( g, width );
 }
 
+// Tras morir se reinicia la cola: la ronda vuelve a empezar con blinky fuera
+// y los demás esperando su turno.
 function resetPositions( game ) {
   const p = game.pacman;
   p.x = PACMAN_START.x;
   p.y = PACMAN_START.y;
   p.dir = 'left';
   p.nextDir = null;
+  game.penTimer = 0;
   game.ghosts.forEach( ( g, i ) => {
     g.x = GHOST_STARTS[ i ].x;
     g.y = GHOST_STARTS[ i ].y;
     g.dir = 'up';
+    g.released = i === 0;
   } );
 }
 
@@ -144,8 +163,17 @@ function collides( a, b ) {
   return Math.abs( a.x - b.x ) < 0.5 && Math.abs( a.y - b.y ) < 0.5;
 }
 
+// Contador de la ronda y liberación de la pen al llegar el turno de cada fantasma.
+function releaseGhosts( game ) {
+  game.penTimer++;
+  game.ghosts.forEach( ( g ) => {
+    if ( !g.released && game.penTimer >= g.releaseAt ) g.released = true;
+  } );
+}
+
 function update( game ) {
   movePacman( game );
+  releaseGhosts( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
   for ( const g of game.ghosts ) {
