@@ -1,6 +1,6 @@
 # SPEC 02 — Liberación por temporizador de los fantasmas en la pen
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-10-27
 > **Objective:** Liberar los 4 fantasmas de la pen uno cada ~1.5s mediante un temporizador de frames, para que salgan ordenados sin depender de la posición de Pac-Man.

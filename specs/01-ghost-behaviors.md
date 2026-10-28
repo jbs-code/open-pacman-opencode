@@ -1,6 +1,6 @@
 # SPEC 01 — Cuatro fantasmas con comportamiento propio
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** Ninguno
 > **Date:** 2026-10-26
 > **Objective:** Dar a los cuatro fantasmas un comportamiento de decisión propio —con Blinky persiguiendo agresivamente a Pac-Man— para que se distingan claramente al jugar.
