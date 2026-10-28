@@ -117,6 +117,9 @@ function movePacman( game ) {
 }
 
 function moveGhost( game, g ) {
+  // Aún no le toca salir: no navega ni se mueve.
+  if ( !g.released ) return;
+
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
@@ -150,8 +153,17 @@ function collides( a, b ) {
   return Math.abs( a.x - b.x ) < 0.5 && Math.abs( a.y - b.y ) < 0.5;
 }
 
+// Contador de la ronda y liberación de la pen al llegar el turno de cada fantasma.
+function releaseGhosts( game ) {
+  game.penTimer++;
+  game.ghosts.forEach( ( g ) => {
+    if ( !g.released && game.penTimer >= g.releaseAt ) g.released = true;
+  } );
+}
+
 function update( game ) {
   movePacman( game );
+  releaseGhosts( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
   for ( const g of game.ghosts ) {
