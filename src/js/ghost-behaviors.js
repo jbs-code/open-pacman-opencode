@@ -5,8 +5,10 @@
 
 const DEBUG_GHOSTS = false;
 
-// Interior de la pen (cols 11-16, filas 13-15) y celda de salida.
-const PEN_BOX = { x1: 11, y1: 13, x2: 16, y2: 15 };
+// Zona de la pen (cols 11-16, filas 12-15) y celda de salida. Incluye la fila
+// de la puerta (12) para que un liberado siga apuntando a PEN_EXIT hasta quedar
+// fuera; si empezara en 13 dejaría de apuntar al cruzar la puerta y se atasca.
+const PEN_BOX = { x1: 11, y1: 12, x2: 16, y2: 15 };
 const PEN_EXIT = { x: 13, y: 11 };
 const CLYDE_CORNER = { x: 0, y: 0 };
 const CLYDE_SHY_RANGE = 8;
