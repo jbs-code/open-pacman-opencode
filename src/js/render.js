@@ -5,6 +5,10 @@ const TILE = 20;
 const WALL_COLOR = '#2121ff';
 const DOOR_COLOR = '#ffb8ff';
 const DOT_COLOR = '#ffb897';
+const POWER_PELLET_COLOR = '#ffff00';
+const FRIGHT_COLOR = '#2121ff';   // fantasma asustado
+const FRIGHT_FLASH_COLOR = '#fff'; // parpadeo de aviso (últimos ~2s)
+const FRIGHT_FLASH_EVERY = 8;      // frames por color durante el parpadeo
 
 function cellCenter( x, y ) {
   return { cx: x * TILE + TILE / 2, cy: y * TILE + TILE / 2 };
@@ -79,6 +83,20 @@ function drawDots( ctx, grid ) {
   }
 }
 
+// Power pellets: círculo amarillo bastante más grande que los dots, estático.
+function drawPowerPellets( ctx, grid ) {
+  ctx.fillStyle = POWER_PELLET_COLOR;
+  for ( let y = 0; y < grid.length; y++ ) {
+    for ( let x = 0; x < grid[ 0 ].length; x++ ) {
+      if ( grid[ y ][ x ] !== 4 ) continue;
+      const { cx, cy } = cellCenter( x, y );
+      ctx.beginPath();
+      ctx.arc( cx, cy, 6, 0, Math.PI * 2 );
+      ctx.fill();
+    }
+  }
+}
+
 function drawPacman( ctx, p, frame ) {
   const { cx, cy } = cellCenter( p.x, p.y );
   let rot = 0;
@@ -98,8 +116,7 @@ function drawPacman( ctx, p, frame ) {
   ctx.fill();
 }
 
-function drawGhost( ctx, g, color ) {
-  const { cx, cy } = cellCenter( g.x, g.y );
+function drawGhostBody( ctx, cx, cy, color ) {
   const r = TILE / 2 - 1;
   const top = cy - r;
   const bottom = cy + r;
@@ -117,9 +134,10 @@ function drawGhost( ctx, g, color ) {
   ctx.lineTo( left, bottom );
   ctx.closePath();
   ctx.fill();
+}
 
-  // ojos mirando segun direccion
-  const dir = DIRS[ g.dir ] || { x: 0, y: 0 };
+function drawGhostEyes( ctx, cx, cy, dirName ) {
+  const dir = DIRS[ dirName ] || { x: 0, y: 0 };
   const ex = dir.x * 1.6;
   const ey = dir.y * 1.6;
   for ( const off of [ -3.5, 3.5 ] ) {
@@ -132,6 +150,13 @@ function drawGhost( ctx, g, color ) {
     ctx.arc( cx + off + ex, cy - 1 + ey, 1.5, 0, Math.PI * 2 );
     ctx.fill();
   }
+}
+
+// Los ojos (fantasma comido) vuelven a la pen sin cuerpo.
+function drawGhost( ctx, g, color ) {
+  const { cx, cy } = cellCenter( g.x, g.y );
+  if ( g.state !== 'eyes' ) drawGhostBody( ctx, cx, cy, color );
+  drawGhostEyes( ctx, cx, cy, g.dir );
 }
 
 function drawHUD( ctx, game, W ) {
@@ -151,6 +176,16 @@ const GHOST_COLORS = {
   clyde: '#ffb852',
 };
 
+// Color del cuerpo según el estado: asustado azul, parpadeando blanco/azul
+// en los últimos FLASH_FRAMES. Sin color = fantasma de solo ojos.
+function ghostColor( game, g, frame ) {
+  if ( g.state === 'eyes' ) return null;
+  if ( game.frightTimer <= 0 ) return GHOST_COLORS[ g.kind ];
+  const flashing =
+    game.frightTimer <= FLASH_FRAMES && Math.floor( frame / FRIGHT_FLASH_EVERY ) % 2 === 0;
+  return flashing ? FRIGHT_FLASH_COLOR : FRIGHT_COLOR;
+}
+
 function draw( ctx, game, frame ) {
   const grid = game.grid;
   const W = grid[ 0 ].length;
@@ -162,8 +197,9 @@ function draw( ctx, game, frame ) {
   drawWalls( ctx, grid );
   drawDoor( ctx, grid );
   drawDots( ctx, grid );
+  drawPowerPellets( ctx, grid );
   drawPacman( ctx, game.pacman, frame );
-  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, GHOST_COLORS[ g.kind ] ) );
+  game.ghosts.forEach( ( g ) => drawGhost( ctx, g, ghostColor( game, g, frame ) ) );
   drawHUD( ctx, game, W );
 }
 

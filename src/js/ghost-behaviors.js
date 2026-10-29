@@ -1,5 +1,6 @@
 // ghost-behaviors.js
 // Estrategia (target) de cada fantasma y elección de dirección compartida.
+// Prioridad: ojos → pen; modo asustado → huir; si no, estrategia clásica.
 // Depende de globals de game.js: DIRS, OPPOSITE, canMove (se usa en tiempo de
 // ejecución, por eso se carga después de game.js).
 
@@ -51,17 +52,51 @@ function isInsidePen( ghost ) {
   return x >= PEN_BOX.x1 && x <= PEN_BOX.x2 && y >= PEN_BOX.y1 && y <= PEN_BOX.y2;
 }
 
-// Target efectivo: dentro de la pen manda PEN_EXIT, si no la estrategia del kind.
+// Target efectivo de un fantasma normal: dentro de la pen manda PEN_EXIT,
+// si no la estrategia del kind.
 function ghostTarget( game, ghost ) {
   if ( isInsidePen( ghost ) ) return PEN_EXIT;
   return GHOST_BEHAVIORS[ ghost.kind ]( game, ghost );
 }
 
-// Elige la dirección que más reduce la distancia Manhattan al target.
-// Sin giro de 180 (salvo callejón sin salida); desempate por orden de DIRS.
+function manhattan( x, y, target ) {
+  return Math.abs( x - target.x ) + Math.abs( y - target.y );
+}
+
+// Dirección que más reduce la distancia Manhattan al target.
+function bestToward( choices, ghost, target ) {
+  let best = choices[ 0 ];
+  let bestDist = Infinity;
+  for ( const dir of choices ) {
+    const d = DIRS[ dir ];
+    const dist = manhattan( ghost.x + d.x, ghost.y + d.y, target );
+    if ( dist < bestDist ) {
+      bestDist = dist;
+      best = dir;
+    }
+  }
+  return best;
+}
+
+// Modo asustado: dirección que más aumenta la distancia a Pac-Man.
+function bestAway( choices, ghost, target ) {
+  let best = choices[ 0 ];
+  let bestDist = -Infinity;
+  for ( const dir of choices ) {
+    const d = DIRS[ dir ];
+    const dist = manhattan( ghost.x + d.x, ghost.y + d.y, target );
+    if ( dist > bestDist ) {
+      bestDist = dist;
+      best = dir;
+    }
+  }
+  return best;
+}
+
+// Elige la dirección para la próxima celda. Sin giro de 180 (salvo callejón
+// sin salida); desempate por orden de DIRS.
 function decideGhostBehavior( game, ghost ) {
   const grid = game.grid;
-  const target = ghostTarget( game, ghost );
 
   const options = Object.keys( DIRS ).filter(
     ( dir ) => dir !== OPPOSITE[ ghost.dir ] && canMove( grid, ghost.x, ghost.y, dir, 'ghost' )
@@ -69,22 +104,17 @@ function decideGhostBehavior( game, ghost ) {
   // Sin salida (callejón): permitir el giro de 180.
   const choices = options.length ? options : [ OPPOSITE[ ghost.dir ] ];
 
-  let best = choices[ 0 ];
-  let bestDist = Infinity;
-  for ( const dir of choices ) {
-    const d = DIRS[ dir ];
-    const dist = Math.abs( ghost.x + d.x - target.x ) + Math.abs( ghost.y + d.y - target.y );
-    if ( dist < bestDist ) {
-      bestDist = dist;
-      best = dir;
-    }
-  }
+  let best;
+  if ( ghost.state === 'eyes' ) best = bestToward( choices, ghost, PEN_EXIT );
+  else if ( game.frightTimer > 0 ) best = bestAway( choices, ghost, pacmanCell( game ) );
+  else best = bestToward( choices, ghost, ghostTarget( game, ghost ) );
 
   if ( DEBUG_GHOSTS ) {
     console.debug(
       '[ghost]', ghost.kind,
       '| celda', { x: ghost.x, y: ghost.y },
-      '| target', { x: target.x, y: target.y },
+      '| state', ghost.state,
+      '| fright', game.frightTimer,
       '| dir', best
     );
   }
